@@ -1,6 +1,6 @@
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from views import get_all_animals, get_single_animal, create_animal, delete_animal, update_animal
+from views import get_all_animals, get_single_animal, create_animal, delete_animal, update_animal, get_single_customer, get_all_customers
 
 # Here's a class. It inherits from another class.
 # For now, think of a class as a container for functions that
@@ -36,7 +36,6 @@ class HandleRequests(BaseHTTPRequestHandler):
     # Here's a method on the class that overrides the parent's method.
     # It handles any GET request.
     def do_GET(self):
-        self._set_headers(200)
         response = {}  # Default response
 
         # Parse the URL and capture the tuple that is returned
@@ -45,9 +44,28 @@ class HandleRequests(BaseHTTPRequestHandler):
         if resource == "animals":
             if id is not None:
                 response = get_single_animal(id)
+                if response is not None:
+                    # return the 200 headers
+                    self._set_headers(200)
+                else:
+                    # return the 404 headers
+                    self._set_headers(404)
 
             else:
                 response = get_all_animals()
+
+        if resource == "customers":
+            if id is not None:
+                response = get_single_customer(id)
+                if response is not None:
+                    # return the 200 headers
+                    self._set_headers(200)
+                else:
+                    # return the 404 headers
+                    self._set_headers(404)
+
+            else:
+                response = get_all_customers()
 
         self.wfile.write(json.dumps(response).encode())
 

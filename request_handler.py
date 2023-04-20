@@ -130,9 +130,9 @@ class HandleRequests(BaseHTTPRequestHandler):
 
         if resource == "customers":
             self._set_headers(405)
-            # no_delete = {
-            #     "message": f'{"Deleting requires you to contact company directly"}'
-            # }
+            resource = {
+                "message": f'{"Deleting requires you to contact company directly"}'
+            }
             self.wfile.write("".encode())
 
         # Encode the new animal and send in response

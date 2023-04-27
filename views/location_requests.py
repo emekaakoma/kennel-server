@@ -1,6 +1,6 @@
 import sqlite3
 import json
-from models import Location
+from models import Location, Animal
 
 LOCATIONS = [
     {
@@ -23,17 +23,25 @@ def get_all_locations():
 
         db_cursor.execute("""
         SELECT
-            a.id,
-            a.name,
-            a.address
-        FROM location a
+            l.id,
+            l.name,
+            l.address,
+            COUNT(a.id) animal,
+            a.breed,
+            a.status,
+            a.location_id,
+            a.customer_id
+        FROM location l
+        JOIN Animal a
+            ON l.id = a.location_id
+        GROUP BY a.location_id
         """)
 
         locations = []
         dataset = db_cursor.fetchall()
 
         for row in dataset:
-            location = Location(row['id'], row['name'], row['address'])
+            location = Location(row['id'], row['name'], row['address'], row['animal'])
 
             locations.append(location.__dict__)
 
@@ -49,6 +57,7 @@ def get_single_location(id):
         SELECT
             l.id,
             l.name,
+            l.animal,
             l.address
         FROM Location l
         WHERE l.id = ?
@@ -56,6 +65,6 @@ def get_single_location(id):
 
         data = db_cursor.fetchone()
 
-        location = Location(data['id'], data['name'], data['address'])
+        location = Location(data['id'], data['name'], data['animal'], data['address'])
 
         return location.__dict__

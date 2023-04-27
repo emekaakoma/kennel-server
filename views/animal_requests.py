@@ -1,6 +1,5 @@
 import sqlite3
-import json
-from models import Animal, Customer
+from models import Animal, Customer, Location
 
 ANIMALS = [
     {
@@ -30,50 +29,61 @@ ANIMALS = [
 ]
 
 
-def get_all_animals():
-    # Open a connection to the database
+def get_all_animals(query_params):
     with sqlite3.connect("./kennel.sqlite3") as conn:
-
-        # Just use these. It's a Black Box.
         conn.row_factory = sqlite3.Row
         db_cursor = conn.cursor()
 
-        # Write the SQL query to get the information you want
-        db_cursor.execute("""
-        SELECT
-            a.id,
-            a.name,
-            a.breed,
-            a.status,
-            a.location_id,
-            a.customer_id,
-            c.name customer_name,
-            c.address customer_address,
-            c.email customer_email,
-            c.password customer_password
-        FROM Animal a
-        JOIN Customer c
-            ON c.id = a.customer_id
-        """)
+        sort_by = ""
 
-        # Initialize an empty list to hold all animal representations
+        if len(query_params) != 0:
+            param = query_params[0]
+            [qs_key, qs_value] = param.split("=")
+
+            if qs_key == "_sortBy":
+                if qs_value == 'status':
+                    sort_by = " ORDER BY status"
+
+            where_clause = f"WHERE a.status = '{qs_value}'"
+
+        sql_to_execute = f"""
+            SELECT
+                a.id,
+                a.name,
+                a.breed,
+                a.status,
+                a.location_id,
+                a.customer_id
+            FROM Animal a
+            {sort_by}
+            {where_clause}
+            """
+            
+            # c.name customer_name,
+            #     c.address customer_address,
+            #     c.email customer_email,
+            #     c.password customer_password
+            
+
+        db_cursor.execute(sql_to_execute)
         animals = []
-
-        # Convert rows of data into a Python list
         dataset = db_cursor.fetchall()
 
-        # Iterate list of data returned from database
         for row in dataset:
 
     # Create an animal instance from the current row
             animal = Animal(row['id'], row['name'], row['breed'], row['status'],
                             row['location_id'], row['customer_id'])
 
-            # Create a Location instance from the current row
-            customer = Customer(row['id'], row['customer_name'], row['customer_address'], row['customer_email'], row['customer_password'])
+            # location = Location(row['id'], row['location_name'], row['location_address'])
+
+            # customer = Customer(row['id'], row['customer_name'], row['customer_address'], row['customer_email'], row['customer_password'])
+
 
             # Add the dictionary representation of the location to the animal
-            animal.customer = customer.__dict__
+            # animal.location = location.__dict__
+            # animal.customer = customer.__dict__
+
 
             # Add the dictionary representation of the animal to the list
             animals.append(animal.__dict__)

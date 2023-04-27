@@ -1,7 +1,7 @@
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 # add this import to the top of the file
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse
 from views import get_all_animals, get_single_animal, create_animal, delete_animal, update_animal, get_all_employees, get_all_customers, get_all_locations, get_single_customer, get_single_employee, get_single_location, get_customers_by_email, get_customers_by_name, get_animal_by_location, get_employee_by_location, get_animal_by_status
 
 # Here's a class. It inherits from another class.
@@ -16,21 +16,24 @@ class HandleRequests(BaseHTTPRequestHandler):
     
 
     def parse_url(self, path):
-        """Parse the url into the resource and id"""
-        parsed_url = urlparse(path)
-        path_params = parsed_url.path.split('/')  # ['', 'animals', 1]
-        resource = path_params[1]
+        url_components = urlparse(path)
+        path_params = url_components.path.strip("/").split("/")
+        query_params = []
 
-        if parsed_url.query:
-            query = parse_qs(parsed_url.query)
-            return (resource, query)
+        if url_components.query != '':
+            query_params = url_components.query.split("&")
 
-        pk = None
+        resource = path_params[0]
+        id = None
+
         try:
-            pk = int(path_params[2])
-        except (IndexError, ValueError):
-            pass
-        return (resource, pk)
+            id = int(path_params[1])
+        except IndexError:
+            pass  # No route parameter exists: /animals
+        except ValueError:
+            pass  # Request had trailing slash: /animals/
+
+        return (resource, id, query_params)
 
     def do_GET(self):
         self._set_headers(200)
@@ -42,13 +45,13 @@ class HandleRequests(BaseHTTPRequestHandler):
 
         # If the path does not include a query parameter, continue with the original if block
         if '?' not in self.path:
-            ( resource, id ) = parsed
+            (resource, id, query_params) = parsed
 
             if resource == "animals":
                 if id is not None:
                     response = get_single_animal(id)
                 else:
-                    response = get_all_animals()
+                    response = get_all_animals(query_params = None)
             elif resource == "customers":
                 if id is not None:
                     response = get_single_customer(id)
@@ -66,19 +69,8 @@ class HandleRequests(BaseHTTPRequestHandler):
                     response = get_all_locations()
 
         else: # There is a ? in the path, run the query param functions
-            (resource, query) = parsed
-
-            # see if the query dictionary has an email key
-            if query.get('email') and resource == 'customers':
-                response = get_customers_by_email(query['email'][0])
-            elif query.get('name') and resource == 'customers':
-                response = get_customers_by_name(query['name'][0])
-            elif query.get('location_id') and resource == 'animals':
-                response = get_animal_by_location(query['location_id'][0])
-            elif query.get('location_id') and resource == 'employees':
-                response = get_employee_by_location(query['location_id'][0])
-            elif query.get('status') and resource == 'animals':
-                response = get_animal_by_status(query['status'][0])
+            (resource, id, query_params) = parsed
+            response = get_all_animals(query_params)
 
         self.wfile.write(json.dumps(response).encode())
 
@@ -93,7 +85,7 @@ class HandleRequests(BaseHTTPRequestHandler):
         post_body = json.loads(post_body)
 
         # Parse the URL
-        (resource, id) = self.parse_url(self.path)
+        (resource, id, query_params) = self.parse_url(self.path)
 
         # Initialize new animal
         new_animal = None
@@ -112,7 +104,7 @@ class HandleRequests(BaseHTTPRequestHandler):
         self._set_headers(204)
 
     # Parse the URL
-        (resource, id) = self.parse_url(self.path)
+        (resource, id, query_params) = self.parse_url(self.path)
 
         # Delete a single animal from the list
         if resource == "animals":
@@ -128,7 +120,7 @@ class HandleRequests(BaseHTTPRequestHandler):
         post_body = json.loads(post_body)
 
         # Parse the URL
-        (resource, id) = self.parse_url(self.path)
+        (resource, id, query_params) = self.parse_url(self.path)
 
         success = False
 
